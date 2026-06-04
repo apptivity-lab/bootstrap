@@ -165,13 +165,28 @@ fi
 ok "DevSpace checked out"
 
 # --- 6. run the installer (wires credential helper, symlinks, skills) -------
+# NOTE: install.sh prints generic "Next steps — 1. Edit github-app.env …". That
+# step is ALREADY DONE here (section 3 wrote it; it only seeds a blank if one is
+# missing, so it leaves ours intact). Section 7 below says so explicitly.
 say "Running install.sh…"
 ( cd "$DEVSPACE_DIR" && ./install.sh )
 
-# --- 7. next steps -----------------------------------------------------------
+# --- 7. verify GitHub auth end-to-end via the installed helper ---------------
+say "Verifying GitHub auth via the installed credential helper…"
+if "$HOME/bin/gh-app-token" >/dev/null 2>&1; then
+  ok "GitHub App auth works — github-app.env is configured, token mints cleanly."
+else
+  die "gh-app-token failed via the installed helper — check $CONFIG_DIR/github-app.env"
+fi
+
+# --- 8. next steps -----------------------------------------------------------
 cat <<EOF
 
-$(ok "Bootstrap complete.")
+$(ok "Bootstrap complete — GitHub auth is fully configured.")
+
+⚠️  IGNORE step 1 of the DevSpace installer output above ("Edit github-app.env").
+    This script already wrote $CONFIG_DIR/github-app.env with your App ID,
+    installation ID, and key path, and just verified a token mints. Nothing to redo.
 
 Add to ~/.zshrc (once), then open a new shell:
 
@@ -181,12 +196,10 @@ Add to ~/.zshrc (once), then open a new shell:
   source $CONFIG_DIR/shell/github-app.zsh
   source $CONFIG_DIR/shell/linear-app.zsh
 
-Then verify:
-  gh-app-token | head -c 4                                      # → ghs_
-  gh api /installation/repositories --jq '.repositories[].full_name'
+Set your git author identity (auth ≠ authorship):
   git config --global user.name  "Your Name"
   git config --global user.email "you@example.com"
 
-Remaining per-user configs install.sh seeded (fill if you use them):
+Optional — only if you use these CLIs (install.sh seeded blank configs):
   $CONFIG_DIR/linear-app.env   $CONFIG_DIR/aikido-cli.env   $CONFIG_DIR/mixpanel-cli.env
 EOF
