@@ -33,7 +33,10 @@ die()  { printf '\033[1;31m✗ %s\033[0m\n' "$*" >&2; exit 1; }
 
 [[ "$(uname -s)" == "Darwin" ]] || die "this bootstrap targets macOS"
 
-# --- 1. prerequisites: git (CLT), Homebrew, mise, jq -------------------------
+# --- 1. prerequisites: git (Xcode CLT), mise, jq ----------------------------
+# DevSpace's only declared prereq is mise (docs/mise-setup.md); everything else
+# — jq, gh, node — is a mise-managed tool. We install just enough here to mint a
+# token and clone: git for the clone, jq for parsing the token response.
 say "Checking prerequisites…"
 
 if ! xcode-select -p >/dev/null 2>&1; then
@@ -43,22 +46,25 @@ if ! xcode-select -p >/dev/null 2>&1; then
 fi
 ok "git: $(git --version)"
 
-if ! command -v brew >/dev/null 2>&1; then
-  say "Installing Homebrew…"
-  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-  # current-session PATH for both Apple-silicon and Intel prefixes
-  for p in /opt/homebrew/bin /usr/local/bin; do [[ -x "$p/brew" ]] && eval "$("$p/brew" shellenv)"; done
-fi
-ok "brew: $(command -v brew)"
-
-command -v jq  >/dev/null 2>&1 || { say "Installing jq…";  brew install jq; }
-if ! command -v mise >/dev/null 2>&1; then
+# mise — the official one-liner. Installs to ~/.local/bin/mise (matches the
+# zshrc activation printed at the end). No Homebrew involved.
+if ! command -v mise >/dev/null 2>&1 && [[ ! -x "$HOME/.local/bin/mise" ]]; then
   say "Installing mise…"
-  brew install mise
+  curl -fsSL https://mise.run | sh
 fi
-ok "jq + mise present"
+export PATH="$HOME/.local/share/mise/shims:$HOME/.local/bin:$PATH"
+ok "mise: $(mise --version)"
 
-# openssl: macOS ships LibreSSL, which signs RS256 fine — no install needed.
+# jq — needed by the token mint below and by bin/gh-app-token. Install via mise
+# unless it's already resolvable (a machine that already had it is left alone).
+if ! command -v jq >/dev/null 2>&1; then
+  say "Installing jq (via mise)…"
+  mise use -g jq
+  hash -r
+fi
+ok "jq: $(command -v jq)"
+
+# openssl + curl: macOS-native (LibreSSL signs RS256 fine) — no install needed.
 command -v openssl >/dev/null 2>&1 || die "openssl missing (unexpected on macOS)"
 
 # --- 2. collect App credentials ---------------------------------------------
