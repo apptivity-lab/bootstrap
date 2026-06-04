@@ -178,7 +178,6 @@ Add to ~/.zshrc (once), then open a new shell:
   path+=("\$HOME/bin")
   source $CONFIG_DIR/shell/github-app.zsh
   source $CONFIG_DIR/shell/linear-app.zsh
-  source $CONFIG_DIR/shell/spawn-claude.zsh
 
 Then verify:
   gh-app-token | head -c 4                                      # → ghs_
