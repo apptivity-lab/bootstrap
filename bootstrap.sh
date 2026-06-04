@@ -70,11 +70,13 @@ command -v openssl >/dev/null 2>&1 || die "openssl missing (unexpected on macOS)
 # --- 2. collect App credentials ---------------------------------------------
 say "GitHub App credentials (per-developer App — reuse your existing one)…"
 
+# Prompts read from /dev/tty, not stdin — so `curl … | bash` (where stdin is the
+# script stream) still reads keyboard input instead of draining the script.
 if [[ -z "${GH_APP_ID:-}" ]]; then
-  read -r -p "  App ID: " GH_APP_ID
+  read -r -p "  App ID: " GH_APP_ID </dev/tty
 fi
 if [[ -z "${GH_APP_INSTALLATION_ID:-}" ]]; then
-  read -r -p "  Installation ID: " GH_APP_INSTALLATION_ID
+  read -r -p "  Installation ID: " GH_APP_INSTALLATION_ID </dev/tty
 fi
 [[ -n "$GH_APP_ID" && -n "$GH_APP_INSTALLATION_ID" ]] || die "App ID and Installation ID are required"
 
@@ -101,16 +103,16 @@ else
   echo "    1) 1Password CLI   (op read 'op://Vault/Item/field')"
   echo "    2) Local file path (AirDrop/scp'd .pem)"
   echo "    3) Paste contents  (end with Ctrl-D)"
-  read -r -p "  Choice [1/2/3]: " choice
+  read -r -p "  Choice [1/2/3]: " choice </dev/tty
   case "$choice" in
-    1) read -r -p "  op reference: " ref
+    1) read -r -p "  op reference: " ref </dev/tty
        command -v op >/dev/null 2>&1 || die "1Password CLI (op) not installed: brew install --cask 1password-cli"
        op read "$ref" > "$PEM_DEST" ;;
-    2) read -r -p "  path to .pem: " src
+    2) read -r -p "  path to .pem: " src </dev/tty
        [[ -f "$src" ]] || die "no file at $src"
        cp "$src" "$PEM_DEST" ;;
     3) echo "  Paste the .pem now, then Ctrl-D:"
-       cat > "$PEM_DEST" ;;
+       cat /dev/tty > "$PEM_DEST" ;;
     *) die "invalid choice" ;;
   esac
 fi
